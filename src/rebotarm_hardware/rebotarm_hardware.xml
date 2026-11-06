@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<library path="rebotarm_hardware_interface">
+  <class name="rebotarm_hardware/RebotArmHardwareInterface"
+         type="rebotarm_hardware::RebotArmHardwareInterface"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>reBotArm six joint Damiao serial hardware interface</description>
+  </class>
+</library>

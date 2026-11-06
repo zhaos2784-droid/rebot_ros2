@@ -1,0 +1,10 @@
+moveit_setup_assistant_config:
+  urdf:
+    package: my_rebot_description
+    relative_path: urdf/ReBot_Arm_DM.urdf
+  srdf:
+    relative_path: config/ReBot_Arm_DM.srdf
+  package_settings:
+    author_name: zhaos2784@gmail.com
+    author_email: zhaos2784@gmail.com
+    generated_timestamp: 1793885212
