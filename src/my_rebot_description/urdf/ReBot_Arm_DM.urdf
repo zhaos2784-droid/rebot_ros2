@@ -482,8 +482,8 @@
       <param name="vel_ki">0.004</param>
       <param name="pos_kp">150.0</param>
       <param name="pos_ki">0.5</param>
-      <param name="mit_kp">20.0</param>
-      <param name="mit_kd">1.0</param>
+      <param name="mit_kp">120.0</param>
+      <param name="mit_kd">5.0</param>
       <!-- MIT 调试初值，未经真机标定；分别调整本轴 Kp/Kd。 -->
       <param name="gravity_scale">1.0</param>
       <param name="torque_limit">12.0</param>
@@ -506,8 +506,8 @@
       <param name="vel_ki">0.004</param>
       <param name="pos_kp">150.0</param>
       <param name="pos_ki">0.5</param>
-      <param name="mit_kp">30.0</param>
-      <param name="mit_kd">1.5</param>
+      <param name="mit_kp">120.0</param>
+      <param name="mit_kd">5.0</param>
       <!-- MIT 调试初值，未经真机标定；分别调整本轴 Kp/Kd。 -->
       <param name="gravity_scale">1.0</param>
       <param name="torque_limit">12.0</param>
@@ -530,8 +530,8 @@
       <param name="vel_ki">0.004</param>
       <param name="pos_kp">150.0</param>
       <param name="pos_ki">0.5</param>
-      <param name="mit_kp">30.0</param>
-      <param name="mit_kd">1.5</param>
+      <param name="mit_kp">120.0</param>
+      <param name="mit_kd">5.0</param>
       <!-- MIT 调试初值，未经真机标定；分别调整本轴 Kp/Kd。 -->
       <param name="gravity_scale">1.0</param>
       <param name="torque_limit">12.0</param>
@@ -554,8 +554,8 @@
       <param name="vel_ki">0.002</param>
       <param name="pos_kp">70.0</param>
       <param name="pos_ki">1.0</param>
-      <param name="mit_kp">10.0</param>
-      <param name="mit_kd">0.5</param>
+      <param name="mit_kp">18.0</param>
+      <param name="mit_kd">2.0</param>
       <!-- MIT 调试初值，未经真机标定；分别调整本轴 Kp/Kd。 -->
       <param name="gravity_scale">1.0</param>
       <param name="torque_limit">4.0</param>
@@ -578,8 +578,8 @@
       <param name="vel_ki">0.002</param>
       <param name="pos_kp">60.0</param>
       <param name="pos_ki">1.0</param>
-      <param name="mit_kp">8.0</param>
-      <param name="mit_kd">0.4</param>
+      <param name="mit_kp">18.0</param>
+      <param name="mit_kd">2.0</param>
       <!-- MIT 调试初值，未经真机标定；分别调整本轴 Kp/Kd。 -->
       <param name="gravity_scale">1.0</param>
       <param name="torque_limit">4.0</param>
@@ -602,8 +602,8 @@
       <param name="vel_ki">0.002</param>
       <param name="pos_kp">60.0</param>
       <param name="pos_ki">1.0</param>
-      <param name="mit_kp">8.0</param>
-      <param name="mit_kd">0.4</param>
+      <param name="mit_kp">18.0</param>
+      <param name="mit_kd">2.0</param>
       <!-- MIT 调试初值，未经真机标定；分别调整本轴 Kp/Kd。 -->
       <param name="gravity_scale">1.0</param>
       <param name="torque_limit">4.0</param>
