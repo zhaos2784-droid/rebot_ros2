@@ -10,6 +10,7 @@
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "pluginlib/class_list_macros.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "urdf/model.h"
 
 namespace rebotarm_hardware
 {
@@ -73,6 +74,17 @@ hardware_interface::CallbackReturn RebotArmHardwareInterface::on_init(
     if (baud_ == 0) {
       throw std::invalid_argument("baud must be positive");
     }
+    urdf::Model limits_model;
+    if (!limits_model.initString(info_.original_xml)) {
+      throw std::runtime_error("Cannot parse robot_description for joint limits");
+    }
+    for (int axis = 0; axis < 3; ++axis) {
+      const std::string key = std::string("gravity_") + "xyz"[axis];
+      const auto it = info_.hardware_parameters.find(key);
+      if (it != info_.hardware_parameters.end()) {
+        gravity_vector_[axis] = parse_float(it->second);
+      }
+    }
     for (std::size_t i = 0; i < joint_count_; ++i) {
       const auto & joint = info_.joints[i];
       const auto expected_name = i < 6 ? "joint" + std::to_string(i + 1) : "gripper";
@@ -122,7 +134,28 @@ hardware_interface::CallbackReturn RebotArmHardwareInterface::on_init(
       if (c.mit_kp < 0 || c.mit_kd < 0) {
         throw std::invalid_argument(joint.name + ": MIT gains must be nonnegative");
       }
+      const auto joint_model = limits_model.getJoint(joint.name);
+      // 第七轴是原始夹爪电机，URDF 没有同名运动学关节。
+      if (i < 6) {
+        if (!joint_model || !joint_model->limits || c.mode != RebotArmSdk::Mode::Mit) {
+          throw std::invalid_argument(joint.name + ": arm requires MIT and URDF joint limits");
+        }
+        position_lower_[i] = joint_model->limits->lower;
+        position_upper_[i] = joint_model->limits->upper;
+        torque_limit_[i] = std::min(
+          static_cast<double>(parse_float(required(joint.parameters, "torque_limit"))),
+          joint_model->limits->effort);
+        gravity_scale_[i] = parse_float(required(joint.parameters, "gravity_scale"));
+      } else {
+        position_lower_[i] = -12.5;
+        position_upper_[i] = 12.5;
+        torque_limit_[i] = parse_float(required(joint.parameters, "torque_limit"));
+      }
+      if (torque_limit_[i] <= 0 || c.mit_kp > 500 || c.mit_kd > 5) {
+        throw std::invalid_argument(joint.name + ": invalid torque limit or MIT gain range");
+      }
     }
+    gravity_.configure(info_.original_xml, gravity_vector_, gravity_scale_);
   } catch (const std::exception & e) {
     RCLCPP_ERROR(logger, "Invalid hardware configuration: %s", e.what());
     return hardware_interface::CallbackReturn::ERROR;
@@ -157,7 +190,7 @@ hardware_interface::CallbackReturn RebotArmHardwareInterface::on_activate(
   const rclcpp_lifecycle::State &)
 {
   try {
-    states_ = sdk_.enable();
+    states_ = sdk_.read_initial_states();
     for (std::size_t i = 0; i < joint_count_; ++i) {
       commands_[i].position = states_[i].position;
       commands_[i].velocity = 0.0;
@@ -165,6 +198,18 @@ hardware_interface::CallbackReturn RebotArmHardwareInterface::on_activate(
       commands_[i].kp = config_[i].mit_kp;
       commands_[i].kd = config_[i].mit_kd;
     }
+    GravityCompensation::Vector q{};
+    for (std::size_t i = 0; i < 6; ++i) {
+      q[i] = states_[i].position;
+    }
+    const auto gravity = gravity_.compute(q);
+    output_ = commands_;
+    for (std::size_t i = 0; i < 6; ++i) {
+      output_[i].effort = std::clamp(gravity[i], -torque_limit_[i], torque_limit_[i]);
+    }
+    // 第一帧已经包含重力补偿，不在低刚度使能后等待若干周期才开始托举。
+    sdk_.enable(output_);
+    active_ = true;
     return hardware_interface::CallbackReturn::SUCCESS;
   } catch (const std::exception & e) {
     RCLCPP_ERROR(logger, "Motor activation failed: %s", e.what());
@@ -177,6 +222,7 @@ hardware_interface::CallbackReturn RebotArmHardwareInterface::on_deactivate(
 {
   try {
     sdk_.disable();
+    active_ = false;
     return hardware_interface::CallbackReturn::SUCCESS;
   } catch (const std::exception & e) {
     RCLCPP_ERROR(logger, "Motor disable failed: %s", e.what());
@@ -219,6 +265,9 @@ RebotArmHardwareInterface::export_command_interfaces()
 hardware_interface::return_type RebotArmHardwareInterface::read(
   const rclcpp::Time &, const rclcpp::Duration &)
 {
+  if (!active_) {
+    return hardware_interface::return_type::OK;
+  }
   try {
     sdk_.read_states(states_);
     return hardware_interface::return_type::OK;
@@ -231,8 +280,47 @@ hardware_interface::return_type RebotArmHardwareInterface::read(
 hardware_interface::return_type RebotArmHardwareInterface::write(
   const rclcpp::Time &, const rclcpp::Duration &)
 {
+  if (!active_) {
+    return hardware_interface::return_type::OK;
+  }
   try {
-    sdk_.write_commands(commands_);
+    GravityCompensation::Vector q{};
+    for (std::size_t i = 0; i < 6; ++i) {
+      q[i] = states_[i].position;
+    }
+    const auto gravity = gravity_.compute(q);
+    output_ = commands_;
+    for (std::size_t i = 0; i < joint_count_; ++i) {
+      auto & out = output_[i];
+      const auto & state = states_[i];
+      if (!std::isfinite(out.position) || !std::isfinite(out.velocity) ||
+        !std::isfinite(out.effort) || !std::isfinite(out.kp) || !std::isfinite(out.kd) ||
+        !std::isfinite(state.position) || !std::isfinite(state.velocity) ||
+        out.kp < 0 || out.kp > 500 || out.kd < 0 || out.kd > 5)
+      {
+        throw std::runtime_error("Invalid MIT command/state");
+      }
+      out.position = std::clamp(out.position, position_lower_[i], position_upper_[i]);
+      out.velocity = std::clamp(
+        out.velocity, -static_cast<double>(config_[i].velocity_limit),
+        static_cast<double>(config_[i].velocity_limit));
+      // effort 命令表示“额外前馈”；重力在输出副本中逐周期叠加，不改写命令缓冲。
+      out.effort += i < 6 ? gravity[i] : 0.0;
+      // 限制包含 PD 在内的预计总力矩，而不只是限制重力前馈。
+      // 电机用自己的高速反馈执行 PD；这里的限制不能代替驱动器硬件限流。
+      const double pd = out.kp * (out.position - state.position) +
+        out.kd * (out.velocity - state.velocity);
+      if (std::abs(pd) > torque_limit_[i]) {
+        const double gain_scale = torque_limit_[i] / std::abs(pd);
+        out.kp *= gain_scale;
+        out.kd *= gain_scale;
+      }
+      const double limited_pd = out.kp * (out.position - state.position) +
+        out.kd * (out.velocity - state.velocity);
+      out.effort = std::clamp(
+        out.effort, -torque_limit_[i] - limited_pd, torque_limit_[i] - limited_pd);
+    }
+    sdk_.write_commands(output_);
     return hardware_interface::return_type::OK;
   } catch (const std::exception & e) {
     RCLCPP_ERROR(logger, "Motor write failed: %s", e.what());

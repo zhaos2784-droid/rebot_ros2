@@ -459,108 +459,154 @@
       <plugin>rebotarm_hardware/RebotArmHardwareInterface</plugin>
       <param name="port_name">/dev/ttyACM0</param>
       <param name="baud">921600</param>
+      <!-- 重力在 base_link 坐标系中的方向；此配置假设底座正立。 -->
+      <param name="gravity_x">0.0</param>
+      <param name="gravity_y">0.0</param>
+      <param name="gravity_z">-9.81</param>
     </hardware>
     <joint name="joint1">
       <command_interface name="position"/>
+      <command_interface name="velocity"/>
+      <command_interface name="effort"/>
+      <command_interface name="kp"/>
+      <command_interface name="kd"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
       <state_interface name="effort"/>
       <param name="motor_id">0x01</param>
       <param name="feedback_id">0x11</param>
-      <param name="control_mode">pos_vel</param>
+      <param name="control_mode">mit</param>
       <param name="model">4340P</param>
-      <param name="velocity_limit">5.0</param>
+      <param name="velocity_limit">0.3</param>
       <param name="vel_kp">0.0125</param>
       <param name="vel_ki">0.004</param>
       <param name="pos_kp">150.0</param>
       <param name="pos_ki">0.5</param>
-      <param name="mit_kp">120.0</param>
-      <param name="mit_kd">8.0</param>
+      <param name="mit_kp">20.0</param>
+      <param name="mit_kd">1.0</param>
+      <!-- MIT 调试初值，未经真机标定；分别调整本轴 Kp/Kd。 -->
+      <param name="gravity_scale">1.0</param>
+      <param name="torque_limit">12.0</param>
     </joint>
     <joint name="joint2">
       <command_interface name="position"/>
+      <command_interface name="velocity"/>
+      <command_interface name="effort"/>
+      <command_interface name="kp"/>
+      <command_interface name="kd"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
       <state_interface name="effort"/>
       <param name="motor_id">0x02</param>
       <param name="feedback_id">0x12</param>
-      <param name="control_mode">pos_vel</param>
+      <param name="control_mode">mit</param>
       <param name="model">4340P</param>
-      <param name="velocity_limit">5.0</param>
+      <param name="velocity_limit">0.3</param>
       <param name="vel_kp">0.0125</param>
       <param name="vel_ki">0.004</param>
       <param name="pos_kp">150.0</param>
       <param name="pos_ki">0.5</param>
-      <param name="mit_kp">120.0</param>
-      <param name="mit_kd">8.0</param>
+      <param name="mit_kp">30.0</param>
+      <param name="mit_kd">1.5</param>
+      <!-- MIT 调试初值，未经真机标定；分别调整本轴 Kp/Kd。 -->
+      <param name="gravity_scale">1.0</param>
+      <param name="torque_limit">12.0</param>
     </joint>
     <joint name="joint3">
       <command_interface name="position"/>
+      <command_interface name="velocity"/>
+      <command_interface name="effort"/>
+      <command_interface name="kp"/>
+      <command_interface name="kd"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
       <state_interface name="effort"/>
       <param name="motor_id">0x03</param>
       <param name="feedback_id">0x13</param>
-      <param name="control_mode">pos_vel</param>
+      <param name="control_mode">mit</param>
       <param name="model">4340P</param>
-      <param name="velocity_limit">5.0</param>
+      <param name="velocity_limit">0.3</param>
       <param name="vel_kp">0.0125</param>
       <param name="vel_ki">0.004</param>
       <param name="pos_kp">150.0</param>
       <param name="pos_ki">0.5</param>
-      <param name="mit_kp">120.0</param>
-      <param name="mit_kd">8.0</param>
+      <param name="mit_kp">30.0</param>
+      <param name="mit_kd">1.5</param>
+      <!-- MIT 调试初值，未经真机标定；分别调整本轴 Kp/Kd。 -->
+      <param name="gravity_scale">1.0</param>
+      <param name="torque_limit">12.0</param>
     </joint>
     <joint name="joint4">
       <command_interface name="position"/>
+      <command_interface name="velocity"/>
+      <command_interface name="effort"/>
+      <command_interface name="kp"/>
+      <command_interface name="kd"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
       <state_interface name="effort"/>
       <param name="motor_id">0x04</param>
       <param name="feedback_id">0x14</param>
-      <param name="control_mode">pos_vel</param>
+      <param name="control_mode">mit</param>
       <param name="model">4310</param>
-      <param name="velocity_limit">3.0</param>
+      <param name="velocity_limit">0.3</param>
       <param name="vel_kp">0.0008</param>
       <param name="vel_ki">0.002</param>
       <param name="pos_kp">70.0</param>
       <param name="pos_ki">1.0</param>
-      <param name="mit_kp">18.0</param>
-      <param name="mit_kd">2.0</param>
+      <param name="mit_kp">10.0</param>
+      <param name="mit_kd">0.5</param>
+      <!-- MIT 调试初值，未经真机标定；分别调整本轴 Kp/Kd。 -->
+      <param name="gravity_scale">1.0</param>
+      <param name="torque_limit">4.0</param>
     </joint>
     <joint name="joint5">
       <command_interface name="position"/>
+      <command_interface name="velocity"/>
+      <command_interface name="effort"/>
+      <command_interface name="kp"/>
+      <command_interface name="kd"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
       <state_interface name="effort"/>
       <param name="motor_id">0x05</param>
       <param name="feedback_id">0x15</param>
-      <param name="control_mode">pos_vel</param>
+      <param name="control_mode">mit</param>
       <param name="model">4310</param>
-      <param name="velocity_limit">3.0</param>
+      <param name="velocity_limit">0.3</param>
       <param name="vel_kp">0.0008</param>
       <param name="vel_ki">0.002</param>
       <param name="pos_kp">60.0</param>
       <param name="pos_ki">1.0</param>
-      <param name="mit_kp">18.0</param>
-      <param name="mit_kd">2.0</param>
+      <param name="mit_kp">8.0</param>
+      <param name="mit_kd">0.4</param>
+      <!-- MIT 调试初值，未经真机标定；分别调整本轴 Kp/Kd。 -->
+      <param name="gravity_scale">1.0</param>
+      <param name="torque_limit">4.0</param>
     </joint>
     <joint name="joint6">
       <command_interface name="position"/>
+      <command_interface name="velocity"/>
+      <command_interface name="effort"/>
+      <command_interface name="kp"/>
+      <command_interface name="kd"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
       <state_interface name="effort"/>
       <param name="motor_id">0x06</param>
       <param name="feedback_id">0x16</param>
-      <param name="control_mode">pos_vel</param>
+      <param name="control_mode">mit</param>
       <param name="model">4310</param>
-      <param name="velocity_limit">3.0</param>
+      <param name="velocity_limit">0.3</param>
       <param name="vel_kp">0.0008</param>
       <param name="vel_ki">0.002</param>
       <param name="pos_kp">60.0</param>
       <param name="pos_ki">1.0</param>
-      <param name="mit_kp">18.0</param>
-      <param name="mit_kd">2.0</param>
+      <param name="mit_kp">8.0</param>
+      <param name="mit_kd">0.4</param>
+      <!-- MIT 调试初值，未经真机标定；分别调整本轴 Kp/Kd。 -->
+      <param name="gravity_scale">1.0</param>
+      <param name="torque_limit">4.0</param>
     </joint>
     <!-- Raw gripper motor angle (rad). No calibrated motor-to-finger conversion. -->
     <joint name="gripper">
@@ -583,6 +629,7 @@
       <param name="pos_ki">1.0</param>
       <param name="mit_kp">8.0</param>
       <param name="mit_kd">1.0</param>
+      <param name="torque_limit">4.0</param>
     </joint>
   </ros2_control>
 </robot>

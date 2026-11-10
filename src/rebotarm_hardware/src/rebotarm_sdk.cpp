@@ -42,63 +42,56 @@ void RebotArmSdk::connect(
   impl_ = std::move(next);
 }
 
-std::array<RebotArmSdk::State, RebotArmSdk::joint_count> RebotArmSdk::enable()
+std::array<RebotArmSdk::State, RebotArmSdk::joint_count> RebotArmSdk::read_initial_states()
 {
   if (!impl_) {
     throw std::runtime_error("MotorBridge is not connected");
   }
-
   std::array<State, joint_count> states{};
   std::array<bool, joint_count> received{};
-  try {
-    for (auto & motor : impl_->motors) {
-      motor.request_feedback();
-    }
-    const auto deadline = Clock::now() + std::chrono::seconds(2);
-    while (Clock::now() < deadline) {
-      impl_->controller->poll_feedback_once();
-      bool all_received = true;
-      for (std::size_t i = 0; i < joint_count; ++i) {
-        const auto state = impl_->motors[i].get_state();
-        if (state && std::isfinite(state->pos)) {
-          states[i] = {
-            state->pos,
-            std::isfinite(state->vel) ? state->vel : 0.0,
-            std::isfinite(state->torq) ? state->torq : 0.0};
-          received[i] = true;
-        }
-        all_received &= received[i];
-      }
-      if (all_received) {
-        break;
-      }
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    for (bool got_feedback : received) {
-      if (!got_feedback) {
-        throw std::runtime_error("No initial feedback from all seven motors");
-      }
-    }
-
-    impl_->controller->enable_all();
+  for (auto & motor : impl_->motors) {
+    motor.request_feedback();
+  }
+  const auto deadline = Clock::now() + std::chrono::seconds(2);
+  while (Clock::now() < deadline) {
+    impl_->controller->poll_feedback_once();
+    bool all_received = true;
     for (std::size_t i = 0; i < joint_count; ++i) {
-      auto & motor = impl_->motors[i];
-      const auto & c = impl_->config[i];
-      if (c.mode == Mode::Mit) {
-        motor.ensure_mode(motorbridge::Mode::MIT);
-        motor.send_mit(static_cast<float>(states[i].position), 0.0f, c.mit_kp, c.mit_kd, 0.0f);
-      } else {
-        motor.write_register_f32(25, c.vel_kp);
-        motor.write_register_f32(26, c.vel_ki);
-        motor.write_register_f32(27, c.pos_kp);
-        motor.write_register_f32(28, c.pos_ki);
-        motor.ensure_mode(motorbridge::Mode::POS_VEL);
-        motor.send_pos_vel(static_cast<float>(states[i].position), c.velocity_limit);
+      const auto state = impl_->motors[i].get_state();
+      if (state && std::isfinite(state->pos) && std::isfinite(state->vel) &&
+        std::isfinite(state->torq) && state->status_code <= 1)
+      {
+        states[i] = {state->pos, state->vel, state->torq};
+        received[i] = true;
       }
+      all_received &= received[i];
     }
+    if (all_received) {
+      return states;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+  throw std::runtime_error("No valid initial feedback from all seven motors");
+}
+
+void RebotArmSdk::enable(const std::array<Command, joint_count> & initial_commands)
+{
+  if (!impl_) {
+    throw std::runtime_error("MotorBridge is not connected");
+  }
+  try {
+    // 初始目标和重力力矩已由硬件层按实测姿态准备好。
+    // 在使能前切完模式，避免使能后又切模式造成短暂失能。
+    for (std::size_t i = 0; i < joint_count; ++i) {
+      if (impl_->config[i].mode != Mode::Mit) {
+        throw std::runtime_error("This hardware configuration requires MIT motors");
+      }
+      impl_->motors[i].ensure_mode(motorbridge::Mode::MIT);
+    }
+    impl_->controller->enable_all();
     impl_->next_feedback_request = Clock::now();
-    impl_->next_write = Clock::now() + std::chrono::milliseconds(5);
-    return states;
+    impl_->next_write = Clock::now();
+    write_commands(initial_commands);
   } catch (...) {
     try {
       impl_->controller->disable_all();
@@ -114,8 +107,8 @@ void RebotArmSdk::disable()
   if (!impl_) {
     return;
   }
-  auto old = std::move(impl_);
-  old->controller->disable_all();
+  // inactive 仍保留串口对象，允许同一硬件实例重新激活。
+  impl_->controller->disable_all();
 }
 
 void RebotArmSdk::close()

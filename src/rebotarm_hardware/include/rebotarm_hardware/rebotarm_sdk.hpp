@@ -55,7 +55,8 @@ public:
   void connect(
     const std::string & port, std::uint32_t baud,
     const std::array<MotorConfig, joint_count> & motors);
-  std::array<State, joint_count> enable();
+  std::array<State, joint_count> read_initial_states();
+  void enable(const std::array<Command, joint_count> & initial_commands);
   void disable();
   void close();
   void read_states(std::array<State, joint_count> & states);

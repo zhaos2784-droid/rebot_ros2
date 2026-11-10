@@ -7,6 +7,7 @@
 
 #include "hardware_interface/system_interface.hpp"
 #include "rebotarm_hardware/rebotarm_sdk.hpp"
+#include "rebotarm_hardware/gravity_compensation.hpp"
 #include "rclcpp/duration.hpp"
 #include "rclcpp/time.hpp"
 #include "rclcpp_lifecycle/state.hpp"
@@ -42,6 +43,14 @@ private:
   std::array<RebotArmSdk::State, joint_count_> states_{};
   std::array<RebotArmSdk::Command, joint_count_> commands_{};
   RebotArmSdk sdk_;
+  GravityCompensation gravity_;
+  GravityCompensation::Vector gravity_scale_{};
+  std::array<double, 3> gravity_vector_{0.0, 0.0, -9.81};
+  std::array<double, joint_count_> torque_limit_{};
+  std::array<double, joint_count_> position_lower_{};
+  std::array<double, joint_count_> position_upper_{};
+  std::array<RebotArmSdk::Command, joint_count_> output_{};
+  bool active_{false};
 };
 
 }  // namespace rebotarm_hardware

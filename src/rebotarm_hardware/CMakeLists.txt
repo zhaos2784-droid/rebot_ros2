@@ -10,6 +10,8 @@ find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
+find_package(urdf REQUIRED)
+find_package(pinocchio REQUIRED)
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
 # Reuse the MotorBridge ABI shipped with the installed Python SDK.
@@ -26,6 +28,13 @@ if(NOT EXISTS "${MOTORBRIDGE_ABI_LIBRARY}")
   message(FATAL_ERROR "MotorBridge ABI library not found. Set MOTORBRIDGE_ABI_LIBRARY.")
 endif()
 
+add_library(rebotarm_gravity SHARED src/gravity_compensation.cpp)
+target_compile_features(rebotarm_gravity PUBLIC cxx_std_17)
+target_include_directories(rebotarm_gravity PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_link_libraries(rebotarm_gravity PRIVATE pinocchio::pinocchio)
+
 add_library(rebotarm_hardware_interface SHARED
   src/rebotarm_sdk.cpp
   src/rebotarm_hardware_interface.cpp)
@@ -34,12 +43,16 @@ target_include_directories(rebotarm_hardware_interface PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 ament_target_dependencies(rebotarm_hardware_interface
-  hardware_interface pluginlib rclcpp rclcpp_lifecycle)
-target_link_libraries(rebotarm_hardware_interface "${MOTORBRIDGE_ABI_LIBRARY}")
+  hardware_interface pluginlib rclcpp rclcpp_lifecycle urdf)
+target_link_libraries(rebotarm_hardware_interface
+  rebotarm_gravity "${MOTORBRIDGE_ABI_LIBRARY}")
 set_target_properties(rebotarm_hardware_interface PROPERTIES INSTALL_RPATH "$ORIGIN")
 
 pluginlib_export_plugin_description_file(hardware_interface rebotarm_hardware.xml)
+install(TARGETS rebotarm_gravity EXPORT export_rebotarm_gravity DESTINATION lib)
 install(TARGETS rebotarm_hardware_interface DESTINATION lib)
+ament_export_targets(export_rebotarm_gravity HAS_LIBRARY_TARGET)
+ament_export_include_directories(include)
 install(FILES "${MOTORBRIDGE_ABI_LIBRARY}" DESTINATION lib)
 install(DIRECTORY include/ DESTINATION include)
 install(FILES MOTORBRIDGE_LICENSE DESTINATION share/${PROJECT_NAME})
