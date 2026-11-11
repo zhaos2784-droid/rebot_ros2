@@ -41,6 +41,7 @@ private:
   std::uint32_t baud_{921600};
   std::array<RebotArmSdk::MotorConfig, joint_count_> config_{};
   std::array<RebotArmSdk::State, joint_count_> states_{};
+  RebotArmSdk::State finger_state_{};  // 第七电机反馈换算后的手指位移/速度/广义力。
   std::array<RebotArmSdk::Command, joint_count_> commands_{};
   RebotArmSdk sdk_;
   GravityCompensation gravity_;

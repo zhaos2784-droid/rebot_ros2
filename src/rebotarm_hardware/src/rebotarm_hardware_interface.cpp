@@ -19,6 +19,16 @@ namespace
 {
 const auto logger = rclcpp::get_logger("rebotarm_hardware");
 
+// 单侧手指 0..0.025 m 对应电机 0..-5 rad；沿用厂家 DM 开闭端点约定。
+// MIT 的 Kp/Kd、力矩限幅仍使用原电机单位，不在这里改动。
+constexpr double gripper_rad_per_meter = -5.0 / 0.025;
+
+RebotArmSdk::State finger_feedback(const RebotArmSdk::State & motor)
+{
+  return {motor.position / gripper_rad_per_meter,
+    motor.velocity / gripper_rad_per_meter, motor.effort * gripper_rad_per_meter};
+}
+
 const std::string & required(
   const std::unordered_map<std::string, std::string> & parameters,
   const std::string & key)
@@ -87,9 +97,9 @@ hardware_interface::CallbackReturn RebotArmHardwareInterface::on_init(
     }
     for (std::size_t i = 0; i < joint_count_; ++i) {
       const auto & joint = info_.joints[i];
-      const auto expected_name = i < 6 ? "joint" + std::to_string(i + 1) : "gripper";
+      const auto expected_name = i < 6 ? "joint" + std::to_string(i + 1) : "finger_left";
       if (joint.name != expected_name) {
-        throw std::invalid_argument("Expected joint1..joint6 followed by gripper");
+        throw std::invalid_argument("Expected joint1..joint6 followed by finger_left");
       }
       auto & c = config_[i];
       const auto & mode = required(joint.parameters, "control_mode");
@@ -135,7 +145,7 @@ hardware_interface::CallbackReturn RebotArmHardwareInterface::on_init(
         throw std::invalid_argument(joint.name + ": MIT gains must be nonnegative");
       }
       const auto joint_model = limits_model.getJoint(joint.name);
-      // 第七轴是原始夹爪电机，URDF 没有同名运动学关节。
+      // 第七电机对外使用米制 finger_left；以下限幅仍在电机弧度域执行。
       if (i < 6) {
         if (!joint_model || !joint_model->limits || c.mode != RebotArmSdk::Mode::Mit) {
           throw std::invalid_argument(joint.name + ": arm requires MIT and URDF joint limits");
@@ -147,8 +157,8 @@ hardware_interface::CallbackReturn RebotArmHardwareInterface::on_init(
           joint_model->limits->effort);
         gravity_scale_[i] = parse_float(required(joint.parameters, "gravity_scale"));
       } else {
-        position_lower_[i] = -12.5;
-        position_upper_[i] = 12.5;
+        position_lower_[i] = -5.0;
+        position_upper_[i] = 0.0;
         torque_limit_[i] = parse_float(required(joint.parameters, "torque_limit"));
       }
       if (torque_limit_[i] <= 0 || c.mit_kp > 500 || c.mit_kd > 5) {
@@ -191,8 +201,9 @@ hardware_interface::CallbackReturn RebotArmHardwareInterface::on_activate(
 {
   try {
     states_ = sdk_.read_initial_states();
+    finger_state_ = finger_feedback(states_[6]);
     for (std::size_t i = 0; i < joint_count_; ++i) {
-      commands_[i].position = states_[i].position;
+      commands_[i].position = i < 6 ? states_[i].position : finger_state_.position;
       commands_[i].velocity = 0.0;
       commands_[i].effort = 0.0;
       commands_[i].kp = config_[i].mit_kp;
@@ -208,6 +219,7 @@ hardware_interface::CallbackReturn RebotArmHardwareInterface::on_activate(
       output_[i].effort = std::clamp(gravity[i], -torque_limit_[i], torque_limit_[i]);
     }
     // 第一帧已经包含重力补偿，不在低刚度使能后等待若干周期才开始托举。
+    output_[6].position *= gripper_rad_per_meter;  // 使能时仍保持当前电机位置。
     sdk_.enable(output_);
     active_ = true;
     return hardware_interface::CallbackReturn::SUCCESS;
@@ -237,9 +249,10 @@ RebotArmHardwareInterface::export_state_interfaces()
   result.reserve(3 * joint_count_);
   for (std::size_t i = 0; i < joint_count_; ++i) {
     const auto & name = info_.joints[i].name;
-    result.emplace_back(name, hardware_interface::HW_IF_POSITION, &states_[i].position);
-    result.emplace_back(name, hardware_interface::HW_IF_VELOCITY, &states_[i].velocity);
-    result.emplace_back(name, hardware_interface::HW_IF_EFFORT, &states_[i].effort);
+    auto & state = i < 6 ? states_[i] : finger_state_;
+    result.emplace_back(name, hardware_interface::HW_IF_POSITION, &state.position);
+    result.emplace_back(name, hardware_interface::HW_IF_VELOCITY, &state.velocity);
+    result.emplace_back(name, hardware_interface::HW_IF_EFFORT, &state.effort);
   }
   return result;
 }
@@ -270,6 +283,7 @@ hardware_interface::return_type RebotArmHardwareInterface::read(
   }
   try {
     sdk_.read_states(states_);
+    finger_state_ = finger_feedback(states_[6]);
     return hardware_interface::return_type::OK;
   } catch (const std::exception & e) {
     RCLCPP_ERROR(logger, "Motor read failed: %s", e.what());
@@ -290,6 +304,10 @@ hardware_interface::return_type RebotArmHardwareInterface::write(
     }
     const auto gravity = gravity_.compute(q);
     output_ = commands_;
+    // 只在输出副本转换第七轴：命令缓冲保留米，SDK 和 PD 限幅使用弧度/力矩。
+    output_[6].position *= gripper_rad_per_meter;
+    output_[6].velocity *= gripper_rad_per_meter;
+    output_[6].effort /= gripper_rad_per_meter;
     for (std::size_t i = 0; i < joint_count_; ++i) {
       auto & out = output_[i];
       const auto & state = states_[i];
