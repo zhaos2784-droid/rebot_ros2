@@ -18,7 +18,6 @@ struct RebotArmSdk::Impl
   std::array<MotorConfig, joint_count> config;
   std::unique_ptr<motorbridge::Controller> controller;
   std::vector<motorbridge::Motor> motors;
-  std::size_t next_feedback_joint{};
   Clock::time_point next_feedback_request{};
   Clock::time_point next_write{};
 };
@@ -124,8 +123,9 @@ void RebotArmSdk::read_states(std::array<State, joint_count> & states)
   impl_->controller->poll_feedback_once();
   const auto now = Clock::now();
   if (now >= impl_->next_feedback_request) {
-    impl_->motors[impl_->next_feedback_joint].request_feedback();
-    impl_->next_feedback_joint = (impl_->next_feedback_joint + 1) % joint_count;
+    for (auto & motor : impl_->motors) {
+      motor.request_feedback();
+    }
     impl_->next_feedback_request = now + std::chrono::milliseconds(10);
   }
   for (std::size_t i = 0; i < joint_count; ++i) {
