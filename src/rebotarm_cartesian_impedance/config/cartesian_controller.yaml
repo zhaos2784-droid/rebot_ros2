@@ -1,0 +1,9 @@
+cartesian_impedance_controller:
+  ros__parameters:
+    frame: world  # world: base_link 同向坐标；tcp: 末端自身坐标
+    translation_k: 300.0  # N/m，10 N 约退 3.3 cm
+    translation_d: 0.0    # 不自己算笛卡尔阻尼，避免振动
+    rotation_k: 5.0      # N m/rad
+    rotation_d: 0.0      # 不自己算笛卡尔阻尼
+    joint_k: 6.0         # joint1 回中弹簧，N m/rad；要能克服 0.2-0.5 N·m 静摩擦
+    joint_d: 0.5         # joint1 回中阻尼，N m s/rad

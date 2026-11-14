@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>rebotarm_cartesian_impedance</name>
+  <version>0.0.1</version>
+  <description>Cartesian impedance demo controller for reBot Arm DM.</description>
+  <maintainer email="zhaos2784@gmail.com">zhao</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>ament_index_cpp</depend>
+  <depend>controller_interface</depend>
+  <depend>hardware_interface</depend>
+  <depend>pluginlib</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_lifecycle</depend>
+  <depend>pinocchio</depend>
+  <exec_depend>my_rebot_description</exec_depend>
+  <exec_depend>rebotarm_moveit_config</exec_depend>
+  <exec_depend>controller_manager</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

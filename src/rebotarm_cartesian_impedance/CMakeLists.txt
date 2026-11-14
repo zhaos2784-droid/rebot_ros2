@@ -1,0 +1,22 @@
+cmake_minimum_required(VERSION 3.8)
+project(rebotarm_cartesian_impedance)
+
+find_package(ament_cmake REQUIRED)
+find_package(ament_index_cpp REQUIRED)
+find_package(controller_interface REQUIRED)
+find_package(hardware_interface REQUIRED)
+find_package(pluginlib REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
+find_package(pinocchio REQUIRED)
+
+add_library(rebotarm_cartesian_impedance SHARED src/cartesian_controller.cpp)
+target_compile_features(rebotarm_cartesian_impedance PUBLIC cxx_std_17)
+ament_target_dependencies(rebotarm_cartesian_impedance
+  ament_index_cpp controller_interface hardware_interface pluginlib rclcpp rclcpp_lifecycle)
+target_link_libraries(rebotarm_cartesian_impedance pinocchio::pinocchio)
+pluginlib_export_plugin_description_file(controller_interface cartesian_controller.xml)
+
+install(TARGETS rebotarm_cartesian_impedance DESTINATION lib)
+install(DIRECTORY config launch DESTINATION share/${PROJECT_NAME})
+ament_package()

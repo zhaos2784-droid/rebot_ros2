@@ -1,0 +1,7 @@
+<library path="rebotarm_cartesian_impedance">
+  <class name="rebotarm_cartesian_impedance/CartesianController"
+         type="rebotarm_cartesian_impedance::CartesianController"
+         base_class_type="controller_interface::ControllerInterface">
+    <description>End-link Cartesian spring and damper using MIT effort.</description>
+  </class>
+</library>
